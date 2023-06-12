@@ -69,8 +69,11 @@ target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
 find_package (Eigen3 REQUIRED)
 target_link_libraries(${PROJECT_NAME}  Eigen3::Eigen)
 
-link_directories(/usr/local/Cellar/gflags/2.2.2)
-target_link_libraries(${PROJECT_NAME} gflags)
+find_package(Gflags REQUIRED)
+find_package(Glog REQUIRED)
+
+include_directories(${GLOG_INCLUDE_DIRS} ${GFLAGS_INCLUDE_DIRS})
+
 find_package(Folly REQUIRED)
 include_directories(${FOLLY_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} ${FOLLY_LIBRARIES})

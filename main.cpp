@@ -2,6 +2,10 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include <iostream>
+
+#include <folly/futures/Future.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
+
 // #include "options_parser.h"
 
 #include "src/vec.h"
@@ -108,9 +112,28 @@ hittable_list random_scene() {
 const int samples_per_pixel = 100;
 const int max_depth = 50;
 
-void write_image() {
+folly::SemiFuture<color> ColorInPixel(
+    int i, int j,
+    int image_width, int image_height,
+    const camera& cam, 
+    const hittable_list& scene
+) {
+    color pixel_color(0, 0, 0);
+    for (int s = 0; s < samples_per_pixel; ++s) {
+        auto u = (i + random_double()) / (image_width-1);
+        auto v = (j + random_double()) / (image_height-1);
+        ray r = cam.get_ray(u, v);
+        pixel_color += ray_color(r, scene, max_depth);
+    }
+
+    return pixel_color;
+}
+
+int main(int argc, char* argv[]) {
+    (void) argc; (void) argv;
+    
     const auto aspect_ratio = 16.0 / 9.0;
-    const int image_width = 400;
+    const int image_width = 200;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
 
     hittable_list scene;
@@ -129,34 +152,29 @@ void write_image() {
     // Camera
     camera cam;
 
-    // Render
-    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    std::vector<folly::Future<color>> futures;
+    futures.reserve(image_height * image_width);
+
+    folly::CPUThreadPoolExecutor executor{2};
 
     for (int j = image_height-1; j >= 0; --j) {
         for (int i = 0; i < image_width; ++i) {
-
-            color pixel_color(0, 0, 0);
-            for (int s = 0; s < samples_per_pixel; ++s) {
-                auto u = (i + random_double()) / (image_width-1);
-                auto v = (j + random_double()) / (image_height-1);
-                ray r = cam.get_ray(u, v);
-                pixel_color += ray_color(r, scene, max_depth);
-            }
-
-            write_color(std::cout, pixel_color, samples_per_pixel);
-
-            std::cerr << ".";
+            auto future = ColorInPixel(i, j, image_width, image_height, cam, scene).via(&executor);
+            futures.push_back(std::move(future));
         }
-        std::cerr << std::endl;
     }
-}
+    folly::collectAll(futures).wait();
 
-int main(int argc, char* argv[]) {
-    (void) argc; (void) argv;
-    // command_line_options_t command_line_options{argc, argv};
-    // std::cout << "A flag value: " << command_line_options.get_A_flag() << std::endl;
-
-    write_image();
+    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    for (int j = image_height-1; j >= 0; --j) {
+        for (int i = 0; i < image_width; ++i) {
+            write_color(
+                std::cout,
+                std::move(futures[(image_height - 1 - j)*image_width + i]).value(),
+                samples_per_pixel
+            );
+        }
+    }
 
     return 0;
 }

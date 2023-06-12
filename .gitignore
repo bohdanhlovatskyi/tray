@@ -2,6 +2,11 @@
 # Prerequisites
 *.d
 
+*.ppm
+.vscode
+.DS_Store
+*.png
+
 # Compiled Object files
 *.slo
 *.lo

@@ -55,10 +55,10 @@ include(cmake/CompilerWarnings.cmake)
 ##########################################################
 
 #! Project main executable source compilation
-add_executable(${PROJECT_NAME} main.cpp src/material.cpp src/hittable.cpp)
+add_executable(${PROJECT_NAME} main.cpp src/utils.cpp src/vec.cpp src/material.cpp src/hittable.cpp)
 
 #! Put path to your project headers
-target_include_directories(${PROJECT_NAME} PRIVATE scr) # options_parse
+target_include_directories(${PROJECT_NAME} PRIVATE include) # options_parse
 
 #! Add external packages
 # options_parser requires boost::program_options library
